@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import db from "./firebase";
 import * as XLSX from "xlsx";
 
-const FieldForm = () => {
+const FieldForm = ({ collectionId }) => {
   const [fieldName, setFieldName] = useState("");
   const [fieldValue, setFieldValue] = useState("");
   const [fieldData, setFieldData] = useState([]);
@@ -10,7 +10,7 @@ const FieldForm = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const snapshot = await db.collection("fields").get();
+        const snapshot = await db.collection(collectionId).get();
         const data = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -21,7 +21,7 @@ const FieldForm = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [collectionId]);
 
   const handleAddField = async () => {
     if (!fieldName || !fieldValue) {
@@ -30,13 +30,13 @@ const FieldForm = () => {
     }
 
     try {
-      await db.collection("fields").add({ [fieldName]: fieldValue });
+      await db.collection(collectionId).add({ [fieldName]: fieldValue });
       // Update the state of the form component to display the new field
       setFieldName("");
       setFieldValue("");
 
       // Refetch the data from Firestore to update the table
-      const snapshot = await db.collection("fields").get();
+      const snapshot = await db.collection(collectionId).get();
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setFieldData(data);
     } catch (error) {
@@ -46,10 +46,10 @@ const FieldForm = () => {
 
   const handleDeleteField = async (idToDelete) => {
     try {
-      await db.collection("fields").doc(idToDelete).delete();
+      await db.collection(collectionId).doc(idToDelete).delete();
 
       // Refetch the data from Firestore to update the table
-      const snapshot = await db.collection("fields").get();
+      const snapshot = await db.collection(collectionId).get();
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setFieldData(data);
     } catch (error) {
@@ -74,7 +74,7 @@ const FieldForm = () => {
 
   return (
     <div className="bg-white p-6 rounded shadow">
-      <h2 className="text-xl font-bold mb-3">Seeding Module</h2>
+      {/* <h2 className="text-xl font-bold mb-3">Seeding Module</h2> */}
       <div className="mb-4">
         <label
           className="block text-gray-700 font-bold mb-2"
