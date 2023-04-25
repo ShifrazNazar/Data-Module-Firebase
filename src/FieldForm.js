@@ -3,6 +3,7 @@ import db from "./firebase";
 import * as XLSX from "xlsx";
 import firebase from "firebase/compat/app";
 import "firebase/compat/storage";
+import { v4 as uuidv4 } from 'uuid';
 
 const storage = firebase.storage();
 
@@ -14,54 +15,65 @@ const FieldForm = ({ collectionId }) => {
   const [pdfUrls, setPdfUrls] = useState([]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const snapshot = await db.collection(collectionId).get();
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setFieldData(data);
-        const pdfs = data.filter((doc) => doc.pdfURL);
-        setPdfUrls(pdfs.map((doc) => doc.pdfURL));
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    fetchData();
-  }, [collectionId]);
+  const fetchData = async () => {
+    try {
+      const snapshot = await db.collection(collectionId).get();
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setFieldData(data);
+      
+      const pdfs = data.filter((doc) => doc.pdfURL);
+      setPdfUrls(pdfs.map((doc) => ({ pdfURL: doc.pdfURL, fileURL: doc.fileURL })));
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  fetchData();
+}, [collectionId]);
+
+  
 
   const handleAddField = async () => {
-    if (!fieldName || !fieldValue) {
-      alert("Field name and field value are required");
-      return;
-    }
-    try {
-      await db.collection(collectionId).add({ [fieldName]: fieldValue });
-      // Update the state of the form component to display the new field
-      setFieldName("");
-      setFieldValue("");
+  if (!fieldName || !fieldValue) {
+    alert("Field name and field value are required");
+    return;
+  }
+  const id = uuidv4();
 
-      // Refetch the data from Firestore to update the table
-      const snapshot = await db.collection(collectionId).get();
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setFieldData(data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  try {
+    // Add the new field to Firestore using the generated ID
+    await db.collection(collectionId).doc(id).set({ [fieldName]: fieldValue });
 
-  const handleDeleteField = async (idToDelete) => {
-    try {
-      await db.collection(collectionId).doc(idToDelete).delete();
-      // Refetch the data from Firestore to update the table
-      const snapshot = await db.collection(collectionId).get();
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setFieldData(data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+    // Update the state of the form component to display the new field
+    setFieldName("");
+    setFieldValue("");
+
+    // Add the new field to the end of the fieldData array
+    setFieldData((prevData) => [
+      ...prevData,
+      { id: id, [fieldName]: fieldValue },
+    ]);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+
+const handleDeleteField = async (idToDelete) => {
+  if (!idToDelete) {
+    return;
+  }
+
+  try {
+    // Delete the document from Firestore
+    await db.collection(collectionId).doc(idToDelete).delete();
+
+    // Remove the deleted field from the local state
+    setFieldData((prevData) => prevData.filter((field) => field.id !== idToDelete));
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 
   const handleExportToExcel = () => {
     const data = fieldData
@@ -125,26 +137,27 @@ const FieldForm = ({ collectionId }) => {
       const fileName = selectedFile.name;
       // Create a storage reference
       const storageRef = storage.ref().child(`${collectionId}/${Date.now()}`);
-
+  
       // Upload the file to storage
       const snapshot = await storageRef.put(selectedFile);
-
+  
       // Get the download URL
       const downloadURL = await snapshot.ref.getDownloadURL();
-
+  
       // Create a new document in the Firestore collection with the download URL
       await db
         .collection(collectionId)
         .add({ pdfURL: downloadURL, fileURL: fileName });
-
+  
+      // Update the pdfUrls state array with the new PDF file's URL
       setPdfUrls((prevUrls) => [
         ...prevUrls,
         { pdfURL: downloadURL, fileURL: fileName },
       ]);
-
+  
       // Reset the selected file
       setSelectedFile(null);
-
+  
       // Refetch the data from Firestore to update the table
       const snapshot2 = await db.collection(collectionId).get();
       const data = snapshot2.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -153,6 +166,8 @@ const FieldForm = ({ collectionId }) => {
       console.log(error);
     }
   };
+  
+  
 
   return (
     <div className="bg-white p-6 rounded shadow">
