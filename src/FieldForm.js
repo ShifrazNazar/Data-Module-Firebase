@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import db from "./firebase";
-import * as XLSX from "xlsx";
 import firebase from "firebase/compat/app";
 import "firebase/compat/storage";
 import { v4 as uuidv4 } from "uuid";
@@ -63,41 +62,7 @@ const FieldForm = ({ collectionId }) => {
     }
   };
 
-  const handleDeleteField = async (idToDelete) => {
-    if (!idToDelete) {
-      return;
-    }
-
-    try {
-      // Delete the document from Firestore
-      await db.collection(collectionId).doc(idToDelete).delete();
-
-      // Remove the deleted field from the local state
-      setFieldData((prevData) =>
-        prevData.filter((field) => field.id !== idToDelete)
-      );
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const handleExportToExcel = () => {
-    const data = fieldData
-      .filter((field) => !field.pdfURL && !field.imageUrl)
-      .map((field) => {
-        const key = Object.keys(field)[1];
-        const value = Object.values(field)[1];
-        return {
-          Field: key,
-          Answer: value,
-        };
-      });
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Fields");
-    XLSX.writeFile(workbook, "fields.xlsx");
-  };
-
+  
   const handleFileChange = (event) => {
     setSelectedFile(event.target.files[0]);
   };
@@ -227,93 +192,6 @@ const FieldForm = ({ collectionId }) => {
 
   return (
     <div className="bg-white p-6 rounded shadow">
-      <div className="mb-6">
-        <div className="flex flex-wrap -mx-3 mb-4">
-          <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
-            <label
-              className="block font-medium text-gray-700 mb-2"
-              htmlFor="fieldName"
-            >
-              Field Name
-            </label>
-            <input
-              className="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="text"
-              placeholder="Enter field name"
-              value={fieldName}
-              onChange={(e) => setFieldName(e.target.value)}
-            />
-          </div>
-          <div className="w-full md:w-1/2 px-3">
-            <label
-              className="block font-medium text-gray-700 mb-2"
-              htmlFor="fieldValue"
-            >
-              Field Value
-            </label>
-            <input
-              className="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              type="text"
-              placeholder="Enter field value"
-              value={fieldValue}
-              onChange={(e) => setFieldValue(e.target.value)}
-            />
-          </div>
-        </div>
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-3"
-          onClick={handleAddField}
-        >
-          Add Column
-        </button>
-        <div className="overflow-x-auto w-full mb-3">
-          <table className="border w-full">
-            <thead className="bg-gray-200">
-              <tr>
-                {fieldData.map((field) => {
-                  const keys = Object.keys(field);
-                  if (keys.includes("pdfURL") || keys.includes("imageUrl")) {
-                    return null; // skip this field
-                  }
-                  return (
-                    <th className="px-4 py-2" key={field.id}>
-                      {keys[1]}
-                      <button
-                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline ml-2"
-                        onClick={() => handleDeleteField(field.id)}
-                      >
-                        X
-                      </button>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                {fieldData.map((field) => {
-                  const keys = Object.keys(field);
-                  if (keys.includes("pdfURL") || keys.includes("imageUrl")) {
-                    return null; // skip this field
-                  }
-                  return (
-                    <td className="border px-4 py-2" key={field.id}>
-                      {Object.values(field)[1]}
-                    </td>
-                  );
-                })}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-3"
-          onClick={handleExportToExcel}
-        >
-          Export to Excel
-        </button>
-      </div>
-
       {/* PDF upload */}
       <div className="mb-4">
         <label
@@ -395,6 +273,46 @@ const FieldForm = ({ collectionId }) => {
               </div>
             ))}
         </div>
+      </div>
+      <div className="mb-6">
+        <div className="flex flex-wrap -mx-3 mb-4">
+          <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
+            <label
+              className="block font-medium text-gray-700 mb-2"
+              htmlFor="fieldName"
+            >
+              Field Name
+            </label>
+            <input
+              className="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              type="text"
+              placeholder="Enter field name"
+              value={fieldName}
+              onChange={(e) => setFieldName(e.target.value)}
+            />
+          </div>
+          <div className="w-full md:w-1/2 px-3">
+            <label
+              className="block font-medium text-gray-700 mb-2"
+              htmlFor="fieldValue"
+            >
+              Field Value
+            </label>
+            <input
+              className="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              type="text"
+              placeholder="Enter field value"
+              value={fieldValue}
+              onChange={(e) => setFieldValue(e.target.value)}
+            />
+          </div>
+        </div>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-3"
+          onClick={handleAddField}
+        >
+          Add Column
+        </button>
       </div>
     </div>
   );
